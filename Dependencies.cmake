@@ -28,4 +28,8 @@ function(cpp_template_redux_setup_dependencies)
     cpmaddpackage("gh:lefticus/tools#update_build_system")
   endif()
 
+  if(NOT TARGET CURL::libcurl)
+    find_package(CURL REQUIRED)
+  endif()
+
 endfunction()
