@@ -160,6 +160,17 @@ jobs:
           gcovr: true
           opencppcoverage: true
 
+      - name: Install libcurl
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev
+          elif [ "${{ runner.os }}" = "macOS" ]; then
+            brew install curl
+          fi
+          # Windows: curl ships with the MSVC toolchain and Windows SDK,
+          # so no installation step is needed there.
+
       - name: Configure CMake
         run: |
           cmake -S . -B ./build -G "${{matrix.generator}}" -D${{ env.PROJECT_NAME }}_ENABLE_IPO=${{matrix.enable_ipo }} -DCMAKE_BUILD_TYPE:STRING=${{matrix.build_type}} -D${{ env.PROJECT_NAME }}_PACKAGING_MAINTAINER_MODE:BOOL=${{matrix.packaging_maintainer_mode}} -D${{ env.PROJECT_NAME }}_ENABLE_COVERAGE:BOOL=${{ matrix.build_type == 'Debug' }} -DGIT_SHA:STRING=${{ github.sha }}

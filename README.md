@@ -1,12 +1,18 @@
 # cmake_template
 
 [![ci](https://github.com/fraserwat/cpp-template-redux/actions/workflows/ci.yml/badge.svg)](https://github.com/fraserwat/cpp-template-redux/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/fraserwat/cpp-template-redux/branch/main/graph/badge.svg)](https://codecov.io/gh/fraserwat/cpp-template-redux)
-[![CodeQL](https://github.com/fraserwat/cpp-template-redux/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/fraserwat/cpp-template-redux/actions/workflows/codeql-analysis.yml)
+[![codecov](https://codecov.io/fraserwat/cpp-template-redux/branch/main/graph/badge.svg)](https://codecov.io/gh/fraserwat/cpp-template-redux)
+[![CodeQL](https://github.com/cpp-best-practices/cmake_template/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/cpp-best-practices/cmake_template/actions/workflows/codeql-analysis.yml)
+
+# C++ Daily News Roundup
+
+In 2024 I had a full social media detox while I was finishing my masters degree and got my screentime down to ~1 hour/day. A side-effect of this. I think this is a good thing to do (to the point where I think it is useful and healthy to just _not have your phone on you_ sometimes), but a side-effect was I felt like I was totally uninformed about anything that was going on "in the world". Some of this might have been said masters degree I was finishing off, and the guilt you feel when doing anything like this (part-time) when you're reading anything that isn't, I dunno, a paper on recommender systems. Regardless, I wanted to learn Rust anyway (the algorithm I was forking for my thesis was implemented in Rust) so I built a [daily news round-up](https://github.com/fraserwat/newsround) which was sent to my inbox.
+
+Since then, there's a couple of things I would have changed, a couple of things that have since broken, and I am learning a new language (C++), so I have refactored it into C++. This is that.
 
 ## cmake_template_redux
 
-This is a stripped down version of the C++ template it is forked from (https://github.com/cpp-best-practices/cmake_template).
+This is a stripped down version of [the C++ template it is forked from](https://github.com/cpp-best-practices/cmake_template).
 
 Some changes:
 

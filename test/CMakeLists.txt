@@ -40,13 +40,19 @@ set_target_properties(gtest gtest_main gmock gmock_main
 
 include(GoogleTest)
 
-add_executable(tests tests.cpp)
+file(GLOB TEST_SOURCES CONFIGURE_DEPENDS "*test*.cpp")
+add_executable(tests ${TEST_SOURCES})
 target_link_libraries(
   tests
   PRIVATE cpp_template_redux::cpp_template_redux_warnings
           cpp_template_redux::cpp_template_redux_options
           GTest::gtest_main
-)
+          # Link against the app library (everything except main.cpp) so tests
+          # have access to all our source code — websites, scraper, curl, etc.
+          compiled_lib)
+
+# Make the src/ directory visible to the test files so they can #include our headers.
+target_include_directories(tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 gtest_discover_tests(tests)
 
