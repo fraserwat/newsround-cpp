@@ -1,4 +1,5 @@
 #include <vector>
+#include <algorithm>
 #include "curl.h"
 #include "scraper.h"
 #include "websites.h"
