@@ -1,5 +1,8 @@
 #include <curl/curl.h>
+#include <curl/multi.h>
 #include <iostream>
+#include <string>
+#include <vector>
 
 #include "curl.h"
 
