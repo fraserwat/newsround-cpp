@@ -1,15 +1,15 @@
 #pragma once
 
 #include <string>
-#include <vector>
 
 class Curl {
 public:
     Curl();
-    void clear();
-
+    static void clear();
+    [[nodiscard]] bool is_ready() const;
 private:
     void init();
+    bool _ready;
 };
 
-[[nodiscard]] std::vector<std::string> CurlWrapper(std::vector<std::string>& urls);
+[[nodiscard]] std::string curl_wrapper(const std::string& url);

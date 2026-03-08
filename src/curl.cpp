@@ -1,57 +1,54 @@
 #include <curl/curl.h>
-#include <curl/multi.h>
 #include <iostream>
 #include <string>
-#include <vector>
+#include <stdexcept>
 
 #include "curl.h"
 
 Curl::Curl() { init(); };
 
-// This is the equivalent of a main() function. Libcurl setups up the environment.
-// https://curl.se/libcurl/c/curl_global_init.html.
-// Then our wrapper is called which processes HTML from each of the URLs in parallel.
-// An equivalent cleanup function runs releasing resources acquired by init, and we
-// have our html blocks to deal with our own logic. Lightweight as possible.
-// cppcheck-suppress functionStatic // TODO: remove once member vars are added
 void Curl::init() { // NOLINT(readability-convert-member-functions-to-static)
-	curl_global_init(CURL_GLOBAL_DEFAULT);
+	_ready = (curl_global_init(CURL_GLOBAL_DEFAULT) == CURLE_OK);
 }
 
-// cppcheck-suppress functionStatic // TODO: remove once member vars are added
-void Curl::clear() { // NOLINT(readability-convert-member-functions-to-static)
+bool Curl::is_ready() const {
+	return _ready;
+}
+
+void Curl::clear() {
 	curl_global_cleanup();
 }
 
 // // This is only needed by other functions inside the curl API, so making it static.
-// static size_t WriteCallback(const char* /*ptr*/, size_t size, size_t numbytes, const void* /*data*/) {
-// 	// https://curl.se/libcurl/c/CURLOPT_WRITEFUNCTION.html
-// 	// Calculate the total size of the incoming HTML chunk.
-// 	size_t totalBytes = size * numbytes;
-// 	return totalBytes;
-// }
+static size_t write_callback(const char* ptr, size_t size, size_t numbytes, void* data) {
+	// Calculate the total size of the incoming HTML chunk.
+	size_t totalBytes = size * numbytes;
+	// curl library requires writeback definition to include void* data, but we need to
+	// convert in order to append. You cannot convert void* to a non-pointer, so we
+	// cast to std::string* before appending char* of size totalBytes.
+	static_cast<std::string*>(data)->append(ptr, totalBytes);
 
-// For each website, a URL is taken in and HTML is returned.
-// cppcheck-suppress constParameterReference // TODO: remove once CurlWrapper is implemented
-std::vector<std::string> CurlWrapper(std::vector<std::string>& urls) { // NOLINT(misc-unused-parameters,cppcoreguidelines-avoid-const-or-ref-data-members)
+	return totalBytes;
+}
 
-	// https://curl.se/libcurl/c/curl_multi_init.html
-	CURLM *multi = curl_multi_init();
+// The processing of the api response, iteratively writing (with the callback fn) to a string block.
+std::string curl_wrapper(const std::string& url) {
+	// Declaring an empty string where the html would be written.
+	std::string html;
 
-	for (const auto& url : urls) { // NOLINT(misc-unused-variables) // TODO: remove once loop body is implemented
-		//
-		// curl_easy_init
-		// curl_easy_setopt(url, WriteCallback, buffer);
-		// curl_multi_add_handle
-		//
-		std::cout << url << '\n';
+	CURL* handle = curl_easy_init();
+	CURLcode response;
+	if (handle) {
+		curl_easy_setopt(handle, CURLOPT_URL, url.c_str());
+		curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_callback);
+		// Using a pointer to html to avoid expensive copy.
+		curl_easy_setopt(handle, CURLOPT_WRITEDATA, &html);
+		response = curl_easy_perform(handle);
+		if (response != CURLE_OK) {
+			curl_easy_cleanup(handle);
+			throw std::runtime_error(curl_easy_strerror(response));
+		}
 	}
-
-	// do { curl_multi_perform } while (still_running)
-	//
-	// for each handle: curl_multi_remove_handle, curl_easy_cleanup
-
-	curl_multi_cleanup(multi);
-	// return html
-	return {};
+	curl_easy_cleanup(handle);
+	return html;
 }
