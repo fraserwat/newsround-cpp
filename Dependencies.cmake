@@ -24,8 +24,8 @@ function(cpp_template_redux_setup_dependencies)
       "SPDLOG_FMT_EXTERNAL ON")
   endif()
 
-  if(NOT TARGET tools::tools)
-    cpmaddpackage("gh:lefticus/tools#update_build_system")
+  if(NOT TARGET CURL::libcurl)
+    find_package(CURL REQUIRED)
   endif()
 
 endfunction()

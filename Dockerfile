@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
     git \
+    libcurl4-openssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Sets the working directory inside the container to /app
@@ -25,6 +26,10 @@ RUN ctest --test-dir build --output-on-failure
 
 # Stage 2: Runtime stage
 FROM ubuntu:latest
+
+RUN apt-get update && apt-get install -y \
+    libcurl4 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy the built binary from the build stage
 COPY --from=build /app/build/src/compiled_app /compiled_app
