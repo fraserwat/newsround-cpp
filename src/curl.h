@@ -2,7 +2,8 @@
 
 #include <string>
 
-class Curl {
+class Curl
+{
 public:
     Curl();
     static void clear();
