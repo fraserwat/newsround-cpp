@@ -3,13 +3,14 @@
 #include <string>
 #include <vector>
 
-class Curl {
+class Curl
+{
 public:
-    Curl();
-    void clear();
+  Curl();
+  void clear();
 
 private:
-    void init();
+  void init();
 };
 
-[[nodiscard]] std::vector<std::string> CurlWrapper(std::vector<std::string>& urls);
+[[nodiscard]] std::vector<std::string> CurlWrapper(std::vector<std::string> &urls);

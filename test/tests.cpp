@@ -1,4 +1,3 @@
 #include <gtest/gtest.h>
 
-TEST(Websites, WebsiteConstructors) {
-}
+TEST(Websites, WebsiteConstructors) {}

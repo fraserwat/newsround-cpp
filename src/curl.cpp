@@ -14,13 +14,15 @@ Curl::Curl() { init(); };
 // An equivalent cleanup function runs releasing resources acquired by init, and we
 // have our html blocks to deal with our own logic. Lightweight as possible.
 // cppcheck-suppress functionStatic // TODO: remove once member vars are added
-void Curl::init() { // NOLINT(readability-convert-member-functions-to-static)
-	curl_global_init(CURL_GLOBAL_DEFAULT);
+void Curl::init()
+{// NOLINT(readability-convert-member-functions-to-static)
+  curl_global_init(CURL_GLOBAL_DEFAULT);
 }
 
 // cppcheck-suppress functionStatic // TODO: remove once member vars are added
-void Curl::clear() { // NOLINT(readability-convert-member-functions-to-static)
-	curl_global_cleanup();
+void Curl::clear()
+{// NOLINT(readability-convert-member-functions-to-static)
+  curl_global_cleanup();
 }
 
 // // This is only needed by other functions inside the curl API, so making it static.
@@ -33,25 +35,26 @@ void Curl::clear() { // NOLINT(readability-convert-member-functions-to-static)
 
 // For each website, a URL is taken in and HTML is returned.
 // cppcheck-suppress constParameterReference // TODO: remove once CurlWrapper is implemented
-std::vector<std::string> CurlWrapper(std::vector<std::string>& urls) { // NOLINT(misc-unused-parameters,cppcoreguidelines-avoid-const-or-ref-data-members)
+std::vector<std::string> CurlWrapper(std::vector<std::string> &urls)
+{// NOLINT(misc-unused-parameters,cppcoreguidelines-avoid-const-or-ref-data-members)
 
-	// https://curl.se/libcurl/c/curl_multi_init.html
-	CURLM *multi = curl_multi_init();
+  // https://curl.se/libcurl/c/curl_multi_init.html
+  CURLM *multi = curl_multi_init();
 
-	for (const auto& url : urls) { // NOLINT(misc-unused-variables) // TODO: remove once loop body is implemented
-		//
-		// curl_easy_init
-		// curl_easy_setopt(url, WriteCallback, buffer);
-		// curl_multi_add_handle
-		//
-		std::cout << url << '\n';
-	}
+  for (const auto &url : urls) {// NOLINT(misc-unused-variables) // TODO: remove once loop body is implemented
+    //
+    // curl_easy_init
+    // curl_easy_setopt(url, WriteCallback, buffer);
+    // curl_multi_add_handle
+    //
+    std::cout << url << '\n';
+  }
 
-	// do { curl_multi_perform } while (still_running)
-	//
-	// for each handle: curl_multi_remove_handle, curl_easy_cleanup
+  // do { curl_multi_perform } while (still_running)
+  //
+  // for each handle: curl_multi_remove_handle, curl_easy_cleanup
 
-	curl_multi_cleanup(multi);
-	// return html
-	return {};
+  curl_multi_cleanup(multi);
+  // return html
+  return {};
 }
