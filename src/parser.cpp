@@ -17,12 +17,7 @@ struct DomNode
 
 // ---- Selector Part ----
 
-enum class Combinator : std::uint8_t
-{
-  None,
-  Descendant,
-  Child
-};
+enum class Combinator : std::uint8_t { None, Descendant, Child };
 
 struct SelectorPart
 {
@@ -35,9 +30,7 @@ struct SelectorPart
 
 static std::size_t skip_whitespace(const std::string &str, std::size_t pos)
 {
-  while (pos < str.size() && (str[pos] == ' ' || str[pos] == '\t' || str[pos] == '\n' || str[pos] == '\r')) {
-    ++pos;
-  }
+  while (pos < str.size() && (str[pos] == ' ' || str[pos] == '\t' || str[pos] == '\n' || str[pos] == '\r')) { ++pos; }
   return pos;
 }
 
@@ -75,15 +68,14 @@ static OpenTagResult parse_opening_tag(const std::string &raw_content, int paren
 
   auto space_pos = content.find_first_of(" \t\n\r");
   DomNode node;
-  node.tag_name = (space_pos == std::string_view::npos)
-      ? std::string(content)
-      : std::string(content.substr(0, space_pos));
-  node.class_attr = extract_class(
-      (space_pos == std::string_view::npos) ? std::string{} : std::string(content.substr(space_pos)));
+  node.tag_name =
+    (space_pos == std::string_view::npos) ? std::string(content) : std::string(content.substr(0, space_pos));
+  node.class_attr =
+    extract_class((space_pos == std::string_view::npos) ? std::string{} : std::string(content.substr(space_pos)));
   node.is_element = true;
   node.parent_index = parent_index;
 
-  return {.node = std::move(node), .self_closing = self_closing};
+  return { .node = std::move(node), .self_closing = self_closing };
 }
 
 static std::vector<DomNode> build_dom(const std::string &html)
@@ -204,8 +196,8 @@ static std::vector<std::string> match_single(const std::vector<DomNode> &nodes, 
   return results;
 }
 
-static std::vector<std::string> match_two_part(
-    const std::vector<DomNode> &nodes, const SelectorPart &ancestor_part, const SelectorPart &target_part)
+static std::vector<std::string>
+  match_two_part(const std::vector<DomNode> &nodes, const SelectorPart &ancestor_part, const SelectorPart &target_part)
 {
   std::vector<std::string> results;
 
