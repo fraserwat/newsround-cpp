@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <string_view>
+#include <iostream>
 
 // ---- DOM Node ----
 
@@ -61,7 +63,7 @@ struct OpenTagResult
 
 // Pure function: parses tag content string and returns a DomNode + self-closing flag.
 // Does not touch any shared state, safe across ASAN container boundaries.
-static OpenTagResult parse_opening_tag(const std::string &raw_content, int parent_index)
+static OpenTagResult parse_opening_tag(const std::string_view &raw_content, int parent_index)
 {
   const bool self_closing = !raw_content.empty() && raw_content.back() == '/';
   const std::string_view content(raw_content.data(), raw_content.size() - (self_closing ? 1 : 0));
@@ -78,46 +80,63 @@ static OpenTagResult parse_opening_tag(const std::string &raw_content, int paren
   return { .node = std::move(node), .self_closing = self_closing };
 }
 
+// First thing the HTML parser does is build a tree model of the website. At its base level this is
+// a vector of nodes, where the nodes have knowledge of their parent nodes (as well as content, tag type, etc).
 static std::vector<DomNode> build_dom(const std::string &html)
 {
+  // Initialising the node tree, html.size() acting as an index as the program traverses the HTML.
+  // Can only be max of html.size()/3 nodes as smallest possible node <x> is 3 chars.
   std::vector<DomNode> nodes;
-  // Pre-sized parent stack: all slots are within size(), so push/pop become index ops,
-  // avoiding the libc++/ASan push_back-after-pop_back container-annotation issue.
-  std::vector<int> open_stack((html.size() / 3) + 1, -1);
-  std::size_t stack_depth = 0;
+  std::vector<int> open_stack;
+  // Reserve memory for this theoretical maximum to avoid heap re-allocation every push_back.
+  open_stack.reserve(html.size() / 3 + 1);
+  nodes.reserve(html.size() / 3 + 1);
 
   std::size_t pos = 0;
   while (pos < html.size()) {
+    // If it's not the start of a tag, it must be a text block. This handles the in between of tags.
     if (html[pos] != '<') {
+      // Find where the text ends (next tag).
       auto end = html.find('<', pos);
+      // ... But if no '<' is found, then we're at the end of the html text.
       if (end == std::string::npos) { end = html.size(); }
+      // The "text" we want to store is simply the chunk found above.
       std::string text = html.substr(pos, end - pos);
+      // If the chunk we just extracted is not blank, we want a DomNode to hold the text.
       if (!text.empty()) {
         DomNode node;
+        // To save on a copy operation, move transfers ownership of memory to node.text.
         node.text = std::move(text);
-        node.parent_index = (stack_depth == 0) ? -1 : open_stack[stack_depth - 1];
+        node.parent_index = open_stack.empty() ? -1 : open_stack.back();  // -1 indicates no parent.
         nodes.push_back(std::move(node));
       }
+      // Finally set new cursor position to the end of this block and continue traversing HTML.
       pos = end;
       continue;
     }
 
+    // Because of 'continue' in above if block, this code will only execute if html[pos] == '<'.
     auto end = html.find('>', pos);
+    // If no closing bracket is found this is malformed HTML. End loop.
     if (end == std::string::npos) { break; }
-
+    // pos is still pointing at '<' at this point, not '>'! So we are looking for </, e.g. </b>.
+    // Assuming there is something in the open_stack, pop the outer-most item, we're closing it off.
     if (pos + 1 < html.size() && html[pos + 1] == '/') {
-      if (stack_depth > 0) { --stack_depth; }
+      if (!open_stack.empty()) { open_stack.pop_back(); }
+      // Ready to move onto the next bit of text and begin the next loop.
       pos = end + 1;
       continue;
     }
 
-    std::string tag_content = html.substr(pos + 1, end - pos - 1);
-    int parent = (stack_depth == 0) ? -1 : open_stack[stack_depth - 1];
+    // Because of the above two code blocks, this will only run if pos was '<', and there is more
+    // HTML code following the closing of that tag. This block is for the opening tags.
+    std::string_view tag_content = std::string_view(html.data()).substr(pos + 1, end - pos - 1);
+    int parent = open_stack.empty() ? -1 : open_stack.back();  // Does it have a parent?
     auto [node, self_closing] = parse_opening_tag(tag_content, parent);
 
     int node_idx = static_cast<int>(nodes.size());
     nodes.push_back(std::move(node));
-    if (!self_closing) { open_stack[stack_depth++] = node_idx; }
+    if (!self_closing) { open_stack.push_back(node_idx); }
     pos = end + 1;
   }
 
@@ -187,7 +206,7 @@ static std::string collect_text(const std::vector<DomNode> &nodes, int element_i
   return result;
 }
 
-static std::vector<std::string> match_single(const std::vector<DomNode> &nodes, const SelectorPart &part)
+static std::vector<std::string> match_selector(const std::vector<DomNode> &nodes, const SelectorPart &part)
 {
   std::vector<std::string> results;
   for (std::size_t idx = 0; idx < nodes.size(); ++idx) {
@@ -197,7 +216,7 @@ static std::vector<std::string> match_single(const std::vector<DomNode> &nodes, 
 }
 
 static std::vector<std::string>
-  match_two_part(const std::vector<DomNode> &nodes, const SelectorPart &ancestor_part, const SelectorPart &target_part)
+  match_compound_selector(const std::vector<DomNode> &nodes, const SelectorPart &ancestor_part, const SelectorPart &target_part)
 {
   std::vector<std::string> results;
 
@@ -227,6 +246,7 @@ static std::vector<std::string>
 }
 
 // ---- Public API ----
+// Entry point into the code, the "main" function equiv. Takes in the raw HTML and a CSS selector.
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 std::vector<std::string> parse(const std::string &html, const std::string &selector)
@@ -234,7 +254,7 @@ std::vector<std::string> parse(const std::string &html, const std::string &selec
   std::vector<DomNode> nodes = build_dom(html);
   std::vector<SelectorPart> parts = parse_selector(selector);
 
-  if (parts.size() == 1) { return match_single(nodes, parts[0]); }
-  if (parts.size() == 2) { return match_two_part(nodes, parts[0], parts[1]); }
+  if (parts.size() == 1) { return match_selector(nodes, parts[0]); }
+  if (parts.size() == 2) { return match_compound_selector(nodes, parts[0], parts[1]); }
   return {};
 }
