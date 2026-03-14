@@ -4,15 +4,16 @@
 #include <string>
 #include <vector>
 #include <string_view>
-#include <iostream>
 
 // ---- DOM Node ----
 
 struct DomNode
 {
+  std::size_t open_start = 0;  // byte offset of '<' in original html
+  std::size_t close_end = 0;   // byte offset after '>' of closing tag (or self-closing '>')
   std::string tag_name;
   std::string class_attr;
-  std::string text;
+  std::string text;            // only populated for text nodes (!is_element)
   int parent_index = -1;
   bool is_element = false;
 };
@@ -63,7 +64,8 @@ struct OpenTagResult
 
 // Pure function: parses tag content string and returns a DomNode + self-closing flag.
 // Does not touch any shared state, safe across ASAN container boundaries.
-static OpenTagResult parse_opening_tag(const std::string_view &raw_content, int parent_index)
+// string_view passed by value -- idiomatic, avoids indirection for a trivially-copyable type.
+static OpenTagResult parse_opening_tag(std::string_view raw_content, int parent_index)
 {
   const bool self_closing = !raw_content.empty() && raw_content.back() == '/';
   const std::string_view content(raw_content.data(), raw_content.size() - (self_closing ? 1 : 0));
@@ -80,64 +82,71 @@ static OpenTagResult parse_opening_tag(const std::string_view &raw_content, int 
   return { .node = std::move(node), .self_closing = self_closing };
 }
 
-// First thing the HTML parser does is build a tree model of the website. At its base level this is
-// a vector of nodes, where the nodes have knowledge of their parent nodes (as well as content, tag type, etc).
+// ---- DOM Builder Helpers ----
+// Each handles one branch of the tokenizer loop, keeping build_dom's complexity low.
+
+static std::size_t process_text_node(const std::string &html, std::size_t pos,
+                                     const std::vector<int> &open_stack, std::vector<DomNode> &nodes)
+{
+  auto end = html.find('<', pos);
+  if (end == std::string::npos) { end = html.size(); }
+  std::string text = html.substr(pos, end - pos);
+  if (!text.empty()) {
+    DomNode node;
+    node.text = std::move(text);
+    node.parent_index = open_stack.empty() ? -1 : open_stack.back();
+    nodes.push_back(std::move(node));
+  }
+  return end;
+}
+
+// Records close_end on the node being closed, then pops it from the stack.
+static std::size_t process_closing_tag(std::size_t end, std::vector<int> &open_stack, std::vector<DomNode> &nodes)
+{
+  if (!open_stack.empty()) {
+    // close_end is byte after '>' so substr(open_start, close_end - open_start) spans the full element.
+    nodes[static_cast<std::size_t>(open_stack.back())].close_end = end + 1;
+    open_stack.pop_back();
+  }
+  return end + 1;
+}
+
+static std::size_t process_opening_tag(const std::string &html, std::size_t pos, std::size_t end,
+                                       std::vector<int> &open_stack, std::vector<DomNode> &nodes)
+{
+  std::string_view tag_content = std::string_view(html).substr(pos + 1, end - pos - 1);
+  int parent = open_stack.empty() ? -1 : open_stack.back();
+  auto [node, self_closing] = parse_opening_tag(tag_content, parent);
+  node.open_start = pos;
+  if (self_closing) { node.close_end = end + 1; }
+  int node_idx = static_cast<int>(nodes.size());
+  nodes.push_back(std::move(node));
+  if (!self_closing) { open_stack.push_back(node_idx); }
+  return end + 1;
+}
+
+// Builds a flat DOM tree: a vector of nodes each knowing their parent index and byte offsets in html.
 static std::vector<DomNode> build_dom(const std::string &html)
 {
-  // Initialising the node tree, html.size() acting as an index as the program traverses the HTML.
-  // Can only be max of html.size()/3 nodes as smallest possible node <x> is 3 chars.
   std::vector<DomNode> nodes;
   std::vector<int> open_stack;
-  // Reserve memory for this theoretical maximum to avoid heap re-allocation every push_back.
-  open_stack.reserve(html.size() / 3 + 1);
-  nodes.reserve(html.size() / 3 + 1);
+  // Conservative upper bound — reserve to avoid repeated heap re-allocation.
+  open_stack.reserve((html.size() / 3) + 1);
+  nodes.reserve((html.size() / 3) + 1);
 
   std::size_t pos = 0;
   while (pos < html.size()) {
-    // If it's not the start of a tag, it must be a text block. This handles the in between of tags.
     if (html[pos] != '<') {
-      // Find where the text ends (next tag).
-      auto end = html.find('<', pos);
-      // ... But if no '<' is found, then we're at the end of the html text.
-      if (end == std::string::npos) { end = html.size(); }
-      // The "text" we want to store is simply the chunk found above.
-      std::string text = html.substr(pos, end - pos);
-      // If the chunk we just extracted is not blank, we want a DomNode to hold the text.
-      if (!text.empty()) {
-        DomNode node;
-        // To save on a copy operation, move transfers ownership of memory to node.text.
-        node.text = std::move(text);
-        node.parent_index = open_stack.empty() ? -1 : open_stack.back();  // -1 indicates no parent.
-        nodes.push_back(std::move(node));
-      }
-      // Finally set new cursor position to the end of this block and continue traversing HTML.
-      pos = end;
+      pos = process_text_node(html, pos, open_stack, nodes);
       continue;
     }
-
-    // Because of 'continue' in above if block, this code will only execute if html[pos] == '<'.
     auto end = html.find('>', pos);
-    // If no closing bracket is found this is malformed HTML. End loop.
-    if (end == std::string::npos) { break; }
-    // pos is still pointing at '<' at this point, not '>'! So we are looking for </, e.g. </b>.
-    // Assuming there is something in the open_stack, pop the outer-most item, we're closing it off.
+    if (end == std::string::npos) { break; }  // malformed HTML
     if (pos + 1 < html.size() && html[pos + 1] == '/') {
-      if (!open_stack.empty()) { open_stack.pop_back(); }
-      // Ready to move onto the next bit of text and begin the next loop.
-      pos = end + 1;
-      continue;
+      pos = process_closing_tag(end, open_stack, nodes);
+    } else {
+      pos = process_opening_tag(html, pos, end, open_stack, nodes);
     }
-
-    // Because of the above two code blocks, this will only run if pos was '<', and there is more
-    // HTML code following the closing of that tag. This block is for the opening tags.
-    std::string_view tag_content = std::string_view(html.data()).substr(pos + 1, end - pos - 1);
-    int parent = open_stack.empty() ? -1 : open_stack.back();  // Does it have a parent?
-    auto [node, self_closing] = parse_opening_tag(tag_content, parent);
-
-    int node_idx = static_cast<int>(nodes.size());
-    nodes.push_back(std::move(node));
-    if (!self_closing) { open_stack.push_back(node_idx); }
-    pos = end + 1;
   }
 
   return nodes;
@@ -192,31 +201,41 @@ static bool matches_part(const DomNode &node, const SelectorPart &part)
 {
   if (!node.is_element) { return false; }
   if (!part.tag_name.empty() && node.tag_name != part.tag_name) { return false; }
-  if (!part.class_name.empty() && node.class_attr != part.class_name) { return false; }
+  // Class attribute may contain multiple space-separated class names;
+  // check that part.class_name appears as a whole token, not just a substring.
+  if (!part.class_name.empty()) {
+    std::size_t pos = 0;
+    while ((pos = node.class_attr.find(part.class_name, pos)) != std::string::npos) {
+      bool at_start = (pos == 0 || node.class_attr[pos - 1] == ' ');
+      bool at_end = (pos + part.class_name.size() == node.class_attr.size()
+                     || node.class_attr[pos + part.class_name.size()] == ' ');
+      if (at_start && at_end) { return true; }
+      ++pos;
+    }
+    return false;
+  }
   return true;
 }
 
-
-static std::string collect_text(const std::vector<DomNode> &nodes, int element_index)
+// Reconstructs the full HTML of a matched element via a single substr on the original html.
+// Works for nested content because open_start..close_end spans the entire element verbatim.
+static std::string reconstruct_element(const std::string &html, const std::vector<DomNode> &nodes, int element_index)
 {
-  std::string result;
-  for (const auto &node : nodes) {
-    if (!node.is_element && node.parent_index == element_index) { result += node.text; }
-  }
-  return result;
+  const auto &node = nodes[static_cast<std::size_t>(element_index)];
+  return html.substr(node.open_start, node.close_end - node.open_start);
 }
 
-static std::vector<std::string> match_selector(const std::vector<DomNode> &nodes, const SelectorPart &part)
+static std::vector<std::string> match_selector(const std::string &html, const std::vector<DomNode> &nodes, const SelectorPart &part)
 {
   std::vector<std::string> results;
   for (std::size_t idx = 0; idx < nodes.size(); ++idx) {
-    if (matches_part(nodes[idx], part)) { results.push_back(collect_text(nodes, static_cast<int>(idx))); }
+    if (matches_part(nodes[idx], part)) { results.push_back(reconstruct_element(html, nodes, static_cast<int>(idx))); }
   }
   return results;
 }
 
 static std::vector<std::string>
-  match_compound_selector(const std::vector<DomNode> &nodes, const SelectorPart &ancestor_part, const SelectorPart &target_part)
+  match_compound_selector(const std::string &html, const std::vector<DomNode> &nodes, const SelectorPart &ancestor_part, const SelectorPart &target_part)
 {
   std::vector<std::string> results;
 
@@ -227,14 +246,14 @@ static std::vector<std::string>
     if (target_part.combinator == Combinator::Child) {
       int parent_idx = nodes[idx].parent_index;
       if (parent_idx != -1 && matches_part(nodes[static_cast<std::size_t>(parent_idx)], ancestor_part)) {
-        results.push_back(collect_text(nodes, node_idx));
+        results.push_back(reconstruct_element(html, nodes, node_idx));
       }
     } else {
       // Walk up the parent chain to find any matching ancestor
       int current = nodes[idx].parent_index;
       while (current != -1) {
         if (matches_part(nodes[static_cast<std::size_t>(current)], ancestor_part)) {
-          results.push_back(collect_text(nodes, node_idx));
+          results.push_back(reconstruct_element(html, nodes, node_idx));
           break;
         }
         current = nodes[static_cast<std::size_t>(current)].parent_index;
@@ -254,7 +273,7 @@ std::vector<std::string> parse(const std::string &html, const std::string &selec
   std::vector<DomNode> nodes = build_dom(html);
   std::vector<SelectorPart> parts = parse_selector(selector);
 
-  if (parts.size() == 1) { return match_selector(nodes, parts[0]); }
-  if (parts.size() == 2) { return match_compound_selector(nodes, parts[0], parts[1]); }
+  if (parts.size() == 1) { return match_selector(html, nodes, parts[0]); }
+  if (parts.size() == 2) { return match_compound_selector(html, nodes, parts[0], parts[1]); }
   return {};
 }
