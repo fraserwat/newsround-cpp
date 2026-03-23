@@ -277,3 +277,100 @@ std::vector<std::string> parse(const std::string &html, const std::string &selec
   if (parts.size() == 2) { return match_compound_selector(html, nodes, parts[0], parts[1]); }
   return {};
 }
+
+// ---- Text Extraction Utilities ----
+
+// Removes all <script> and <style> blocks (including their content) from html.
+static std::string strip_inert_blocks(const std::string &html)
+{
+  std::string result = html;
+  for (const char *tag : { "script", "style" }) {
+    std::string open = std::string("<") + tag;
+    std::string close = std::string("</") + tag + ">";
+    std::size_t start = 0;
+    while ((start = result.find(open, start)) != std::string::npos) {
+      auto end = result.find(close, start);
+      if (end == std::string::npos) { break; }
+      result.erase(start, end + close.size() - start);
+    }
+  }
+  return result;
+}
+
+static std::string normalize_whitespace(const std::string &str)
+{
+  std::string out;
+  out.reserve(str.size());
+  bool in_space = true; // starts true to trim leading whitespace
+  for (char ch : str) {
+    if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r') {
+      if (!in_space) { out += ' '; in_space = true; }
+    } else {
+      out += ch;
+      in_space = false;
+    }
+  }
+  if (!out.empty() && out.back() == ' ') { out.pop_back(); }
+  return out;
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+std::string extract_href(const std::string &html, const std::string &base_url)
+{
+  const std::string marker = "href=\"";
+  auto href_start = html.find(marker);
+  if (href_start == std::string::npos) { return {}; }
+  href_start += marker.size();
+
+  auto href_end = html.find('"', href_start);
+  if (href_end == std::string::npos) { return {}; }
+
+  std::string href = html.substr(href_start, href_end - href_start);
+
+  constexpr std::string_view http = "http://";
+  constexpr std::string_view https = "https://";
+  if (href.substr(0, http.size()) == http || href.substr(0, https.size()) == https) {
+    return href;
+  }
+
+  return base_url + href;
+}
+
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+std::string extract_inner_text(const std::string &html, const std::string &tag)
+{
+  const std::string cleaned = strip_inert_blocks(html);
+  std::string result;
+  const std::string open_tag = "<" + tag;
+  const std::string closing_tag = "</" + tag + ">";
+
+  std::size_t pos = 0;
+  while (pos < cleaned.size()) {
+    auto tag_start = cleaned.find(open_tag, pos);
+    if (tag_start == std::string::npos) { break; }
+
+    auto content_start = cleaned.find('>', tag_start);
+    if (content_start == std::string::npos) { break; }
+    ++content_start;
+
+    auto content_end = cleaned.find(closing_tag, content_start);
+    if (content_end == std::string::npos) { break; }
+
+    if (!result.empty()) { result += ' '; }
+
+    // Strip nested HTML tags by skipping '<' ... '>' sequences.
+    for (std::size_t i = content_start; i < content_end; ++i) {
+      if (cleaned[i] == '<') {
+        auto close = cleaned.find('>', i);
+        if (close == std::string::npos || close >= content_end) { break; }
+        i = close;
+      } else {
+        result += cleaned[i];
+      }
+    }
+
+    pos = content_end + closing_tag.size();
+  }
+
+  return normalize_whitespace(result);
+}
