@@ -2,18 +2,18 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
 #include <string_view>
+#include <vector>
 
 // ---- DOM Node ----
 
 struct DomNode
 {
-  std::size_t open_start = 0;  // byte offset of '<' in original html
-  std::size_t close_end = 0;   // byte offset after '>' of closing tag (or self-closing '>')
+  std::size_t open_start = 0;// byte offset of '<' in original html
+  std::size_t close_end = 0;// byte offset after '>' of closing tag (or self-closing '>')
   std::string tag_name;
   std::string class_attr;
-  std::string text;            // only populated for text nodes (!is_element)
+  std::string text;// only populated for text nodes (!is_element)
   int parent_index = -1;
   bool is_element = false;
 };
@@ -85,8 +85,10 @@ static OpenTagResult parse_opening_tag(std::string_view raw_content, int parent_
 // ---- DOM Builder Helpers ----
 // Each handles one branch of the tokenizer loop, keeping build_dom's complexity low.
 
-static std::size_t process_text_node(const std::string &html, std::size_t pos,
-                                     const std::vector<int> &open_stack, std::vector<DomNode> &nodes)
+static std::size_t process_text_node(const std::string &html,
+  std::size_t pos,
+  const std::vector<int> &open_stack,
+  std::vector<DomNode> &nodes)
 {
   auto end = html.find('<', pos);
   if (end == std::string::npos) { end = html.size(); }
@@ -111,8 +113,11 @@ static std::size_t process_closing_tag(std::size_t end, std::vector<int> &open_s
   return end + 1;
 }
 
-static std::size_t process_opening_tag(const std::string &html, std::size_t pos, std::size_t end,
-                                       std::vector<int> &open_stack, std::vector<DomNode> &nodes)
+static std::size_t process_opening_tag(const std::string &html,
+  std::size_t pos,
+  std::size_t end,
+  std::vector<int> &open_stack,
+  std::vector<DomNode> &nodes)
 {
   std::string_view tag_content = std::string_view(html).substr(pos + 1, end - pos - 1);
   int parent = open_stack.empty() ? -1 : open_stack.back();
@@ -141,7 +146,7 @@ static std::vector<DomNode> build_dom(const std::string &html)
       continue;
     }
     auto end = html.find('>', pos);
-    if (end == std::string::npos) { break; }  // malformed HTML
+    if (end == std::string::npos) { break; }// malformed HTML
     if (pos + 1 < html.size() && html[pos + 1] == '/') {
       pos = process_closing_tag(end, open_stack, nodes);
     } else {
@@ -225,7 +230,8 @@ static std::string reconstruct_element(const std::string &html, const std::vecto
   return html.substr(node.open_start, node.close_end - node.open_start);
 }
 
-static std::vector<std::string> match_selector(const std::string &html, const std::vector<DomNode> &nodes, const SelectorPart &part)
+static std::vector<std::string>
+  match_selector(const std::string &html, const std::vector<DomNode> &nodes, const SelectorPart &part)
 {
   std::vector<std::string> results;
   for (std::size_t idx = 0; idx < nodes.size(); ++idx) {
@@ -234,8 +240,10 @@ static std::vector<std::string> match_selector(const std::string &html, const st
   return results;
 }
 
-static std::vector<std::string>
-  match_compound_selector(const std::string &html, const std::vector<DomNode> &nodes, const SelectorPart &ancestor_part, const SelectorPart &target_part)
+static std::vector<std::string> match_compound_selector(const std::string &html,
+  const std::vector<DomNode> &nodes,
+  const SelectorPart &ancestor_part,
+  const SelectorPart &target_part)
 {
   std::vector<std::string> results;
 
@@ -301,10 +309,13 @@ static std::string normalize_whitespace(const std::string &str)
 {
   std::string out;
   out.reserve(str.size());
-  bool in_space = true; // starts true to trim leading whitespace
+  bool in_space = true;// starts true to trim leading whitespace
   for (char ch : str) {
     if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r') {
-      if (!in_space) { out += ' '; in_space = true; }
+      if (!in_space) {
+        out += ' ';
+        in_space = true;
+      }
     } else {
       out += ch;
       in_space = false;
@@ -329,9 +340,7 @@ std::string extract_href(const std::string &html, const std::string &base_url)
 
   constexpr std::string_view http = "http://";
   constexpr std::string_view https = "https://";
-  if (href.substr(0, http.size()) == http || href.substr(0, https.size()) == https) {
-    return href;
-  }
+  if (href.substr(0, http.size()) == http || href.substr(0, https.size()) == https) { return href; }
 
   return base_url + href;
 }

@@ -39,7 +39,10 @@ std::string curl_wrapper(const std::string &url)
   CURLcode response;
   if (handle) {
     curl_easy_setopt(handle, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(handle, CURLOPT_USERAGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+    curl_easy_setopt(handle,
+      CURLOPT_USERAGENT,
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 "
+      "Safari/537.36");
     curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1L);
 
     curl_slist *headers = nullptr;

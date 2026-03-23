@@ -1,11 +1,11 @@
-#include <vector>
-#include <string>
-#include <iostream>
 #include "scraper.h"
-#include "parser.h"
 #include "curl.h"
+#include "parser.h"
+#include <iostream>
+#include <string>
+#include <vector>
 
-Story website_handler(const Website* site)
+Story website_handler(const Website *site)
 {
   // Get the website's front page.
   std::string front_page = curl_wrapper(site->url);

@@ -112,8 +112,7 @@ TEST(Parser, AdvancedTesting)
 
   // Test for an <a> tag with href — simulate a real news link selector like ".titleline > a"
   {
-    std::string html =
-      R"(<span class="titleline"><a href="https://example.com/story">Example Story</a></span>)";
+    std::string html = R"(<span class="titleline"><a href="https://example.com/story">Example Story</a></span>)";
     auto result = parse(html, ".titleline > a");
     ASSERT_EQ(result.size(), 1U);
     EXPECT_EQ(result[0], R"(<a href="https://example.com/story">Example Story</a>)");

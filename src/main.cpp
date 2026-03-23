@@ -13,9 +13,7 @@ int main()
   std::vector<Story> todays_stories;
   todays_stories.reserve(websites.size());
   // Putting empty stories in for std::transform to overwrite.
-  for (const auto &_ : websites) {
-    todays_stories.push_back(Story{});
-  }
+  for (const auto &_ : websites) { todays_stories.push_back(Story{}); }
   // TODO: Parallelise once the sequential version works.
   std::transform(websites.cbegin(), websites.cend(), todays_stories.begin(), website_handler);
 
