@@ -19,6 +19,31 @@ Some changes:
  * Moved from Catch2 to GoogleTest. This was because I am already familiar with GoogleTest.
  * Warnings as errors, but only on code native to this project. There are some warnings which GoogleTest came with and imo this is too strict a setting. I am comfortable with the best practice that code I am producing should not be producing errors by default. Caveats around safe imports of trusted libraries still apply. 
 
+## Known Issues / TODO: Needs Proper Docs
+
+### macOS: `malloc: nano zone abandoned due to inability to reserve vm space`
+
+When running the app on macOS you may see:
+
+```
+compiled_app(...) malloc: nano zone abandoned due to inability to reserve vm space.
+```
+
+Things like the Address Sanitiser (used by curl in this app) crowd out the nano zone on macOS, so this particular malloc optimisation is going to raise a warning -- this is intentional! So will suppress.
+
+The fix is to set `MallocNanoZone=0` in your environment before running the binary. CMake has no mechanism to inject environment variables into a directly-executed binary (only into CTest-managed processes), so this needs to be documented properly and handled at the shell/docs level.
+
+## Prerequisites
+
+The following system libraries must be installed before building. On macOS:
+
+```
+brew install curl rocksdb
+```
+
+- **curl** — HTTP requests for scraping
+- **rocksdb** — persistent key-value store for deduplicating seen stories
+
 ## Getting Started
 
 ### Use the GitHub template

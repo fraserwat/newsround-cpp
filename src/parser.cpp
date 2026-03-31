@@ -292,9 +292,9 @@ std::vector<std::string> parse(const std::string &html, const std::string &selec
 static std::string strip_inert_blocks(const std::string &html)
 {
   std::string result = html;
-  for (const char *tag : { "script", "style" }) {
-    std::string open = std::string("<") + tag;
-    std::string close = std::string("</") + tag + ">";
+  for (const std::string &tag : { std::string("script"), std::string("style") }) {
+    std::string open = "<" + tag;
+    std::string close = "</" + tag + ">";
     std::size_t start = 0;
     while ((start = result.find(open, start)) != std::string::npos) {
       auto end = result.find(close, start);

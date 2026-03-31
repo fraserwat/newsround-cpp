@@ -8,24 +8,12 @@ function(cpp_template_redux_setup_dependencies)
   # For each dependency, see if it's
   # already been provided to us by a parent project
 
-  if(NOT TARGET fmtlib::fmtlib)
-    cpmaddpackage("gh:fmtlib/fmt#12.1.0")
-  endif()
-
-  if(NOT TARGET spdlog::spdlog)
-    cpmaddpackage(
-      NAME
-      spdlog
-      VERSION
-      1.17.0
-      GITHUB_REPOSITORY
-      "gabime/spdlog"
-      OPTIONS
-      "SPDLOG_FMT_EXTERNAL ON")
-  endif()
-
   if(NOT TARGET CURL::libcurl)
     find_package(CURL REQUIRED)
+  endif()
+
+  if(NOT TARGET RocksDB::rocksdb)
+    find_package(RocksDB REQUIRED)
   endif()
 
 endfunction()

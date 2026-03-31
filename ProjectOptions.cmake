@@ -1,5 +1,4 @@
 include(cmake/SystemLink.cmake)
-include(cmake/LibFuzzer.cmake)
 include(CMakeDependentOption)
 include(CheckCXXCompilerFlag)
 
@@ -115,15 +114,6 @@ macro(cpp_template_redux_setup_options)
       cpp_template_redux_ENABLE_CACHE)
   endif()
 
-  cpp_template_redux_check_libfuzzer_support(LIBFUZZER_SUPPORTED)
-  if(LIBFUZZER_SUPPORTED AND (cpp_template_redux_ENABLE_SANITIZER_ADDRESS OR cpp_template_redux_ENABLE_SANITIZER_THREAD OR cpp_template_redux_ENABLE_SANITIZER_UNDEFINED))
-    set(DEFAULT_FUZZER ON)
-  else()
-    set(DEFAULT_FUZZER OFF)
-  endif()
-
-  option(cpp_template_redux_BUILD_FUZZ_TESTS "Enable fuzz testing executable" ${DEFAULT_FUZZER})
-
 endmacro()
 
 macro(cpp_template_redux_global_options)
@@ -162,7 +152,6 @@ macro(cpp_template_redux_local_options)
   cpp_template_redux_set_project_warnings(
     cpp_template_redux_warnings
     ${cpp_template_redux_WARNINGS_AS_ERRORS}
-    ""
     ""
     ""
     "")
