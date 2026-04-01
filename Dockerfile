@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     git \
     libcurl4-openssl-dev \
+    librocksdb-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Sets the working directory inside the container to /app
@@ -29,6 +30,7 @@ FROM ubuntu:latest
 
 RUN apt-get update && apt-get install -y \
     libcurl4 \
+    librocksdb8.9 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the built binary from the build stage

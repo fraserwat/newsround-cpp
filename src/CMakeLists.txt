@@ -10,7 +10,8 @@ target_link_libraries(
   compiled_lib
   PUBLIC cpp_template_redux::cpp_template_redux_options
          cpp_template_redux::cpp_template_redux_warnings
-         CURL::libcurl)
+         CURL::libcurl
+         RocksDB::rocksdb)
 
 # The runnable app is just main.cpp wired to the library above.
 add_executable(compiled_app main.cpp)

@@ -29,7 +29,3 @@ else()
   message(STATUS "No colored compiler diagnostic set for '${CMAKE_CXX_COMPILER_ID}' compiler.")
 endif()
 
-
-# run vcvarsall when msvc is used
-include("${CMAKE_CURRENT_LIST_DIR}/VCEnvironment.cmake")
-cpp_template_redux_run_vcvarsall()
