@@ -13,12 +13,8 @@ static std::string normalize_url(const std::string &url)
   constexpr std::string_view https_prefix = "https://";
   constexpr std::string_view http_prefix = "http://";
 
-  if (url.starts_with(https_prefix)) {
-    return url.substr(https_prefix.size());
-  }
-  if (url.starts_with(http_prefix)) {
-    return url.substr(http_prefix.size());
-  }
+  if (url.starts_with(https_prefix)) { return url.substr(https_prefix.size()); }
+  if (url.starts_with(http_prefix)) { return url.substr(http_prefix.size()); }
   return url;
 }
 
@@ -27,8 +23,7 @@ struct SeenStories::Impl
   std::unique_ptr<rocksdb::DB> db;
 };
 
-SeenStories::SeenStories(const std::string &db_path)
-  : impl_(std::make_unique<Impl>())
+SeenStories::SeenStories(const std::string &db_path) : impl_(std::make_unique<Impl>())
 {
 
   // Create folder for db if it doesn't already exist.
@@ -42,12 +37,10 @@ SeenStories::SeenStories(const std::string &db_path)
   // rocksdb::DB** (pointer to a pointer) so it needs a raw pointer to write into. We want to
   // create this raw pointer, and then move ownership of it to a unique_ptr to adhere to the
   // Rule of Zero and avoid any memory management ourselves.
-  rocksdb::DB* raw_db = nullptr;
+  rocksdb::DB *raw_db = nullptr;
   // Initialise the raw_db.
   rocksdb::Status status = rocksdb::DB::Open(options, db_path, &raw_db);
-  if (!status.ok()) {
-    throw std::runtime_error("Failed to open RocksDB: " + status.ToString());
-  }
+  if (!status.ok()) { throw std::runtime_error("Failed to open RocksDB: " + status.ToString()); }
   // Transfer ownership of db into a unique_ptr
   impl_->db.reset(raw_db);
 }

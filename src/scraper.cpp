@@ -16,9 +16,8 @@ Story website_handler(const Website *site, SeenStories &seen)
   if (top_stories.empty()) { return Story{}; }
 
   // Find the first story that hasn't been sent in a previous newsletter.
-  auto unseen = std::ranges::find_if(top_stories, [&](const std::string &html) {
-    return !seen.has_seen(extract_href(html, site->url));
-  });
+  auto unseen = std::ranges::find_if(
+    top_stories, [&](const std::string &html) { return !seen.has_seen(extract_href(html, site->url)); });
   if (unseen == top_stories.cend()) { return Story{}; }
 
   Story chosen_story = {
@@ -54,6 +53,4 @@ std::optional<std::string> format_summarisation(const std::vector<Story> &storie
   return out;
 }
 
-std::string llm_summarisation(const std::string_view /*input*/) {
-  return {};
-}
+std::string llm_summarisation(const std::string_view /*input*/) { return {}; }
