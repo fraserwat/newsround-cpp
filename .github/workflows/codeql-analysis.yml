@@ -81,8 +81,8 @@ jobs:
         gcovr: false
         opencppcoverage: false
 
-    - name: Install libcurl
-      run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev
+    - name: Install libcurl and RocksDB
+      run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev librocksdb-dev
       # CodeQL only runs on ubuntu-latest so no OS check needed here.
 
       # make sure coverage is only enabled for Debug builds, since it sets -O0 to make sure coverage
