@@ -33,6 +33,12 @@ jobs:
         packaging_maintainer_mode:
           - ON
 
+        exclude:
+          # GCC on macOS links against Homebrew libraries built with Clang/libc++,
+          # causing an ABI mismatch (std::__1 vs std::__cxx11) with RocksDB.
+          - os: macos-latest
+            compiler: gcc-14
+
         include:
           # Add appropriate variables for gcov version required. This will intentionally break
           # if you try to use a compiler that does not have gcov set
