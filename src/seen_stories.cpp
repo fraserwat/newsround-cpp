@@ -24,28 +24,32 @@ static std::string normalize_url(const std::string &url)
 
 struct SeenStories::Impl
 {
-  rocksdb::DB *db = nullptr;
-  // TODO(claude): you have the constructor, destructor, copy constructor and copy assignment constructor. We are using C++>11, so where is the move operator and move assignment operator, to satisfy the rule of five?
-  // TODO(claude): Expain to me why we are defining all of these memory management methods instead of using the rule of zero. You later use a uniue pointer.
-  // TODO(claude): What is impl here? we have SeenStories constructor defined below, why are we defining Impl constructors and destructors?
-  Impl() = default;
-  ~Impl() { delete db; }
-  Impl(const Impl &) = delete;
-  Impl &operator=(const Impl &) = delete;
+  std::unique_ptr<rocksdb::DB> db;
 };
 
 SeenStories::SeenStories(const std::string &db_path)
   : impl_(std::make_unique<Impl>())
 {
+
+  // Create folder for db if it doesn't already exist.
   std::filesystem::create_directories(db_path);
 
+  // Define the config.
   rocksdb::Options options;
   options.create_if_missing = true;
 
-  rocksdb::Status status = rocksdb::DB::Open(options, db_path, &impl_->db);
+  // Creating an "empty slot" for the db in a raw pointer. rocksdb is a C-style API which writes to
+  // rocksdb::DB** (pointer to a pointer) so it needs a raw pointer to write into. We want to
+  // create this raw pointer, and then move ownership of it to a unique_ptr to adhere to the
+  // Rule of Zero and avoid any memory management ourselves.
+  rocksdb::DB* raw_db = nullptr;
+  // Initialise the raw_db.
+  rocksdb::Status status = rocksdb::DB::Open(options, db_path, &raw_db);
   if (!status.ok()) {
     throw std::runtime_error("Failed to open RocksDB: " + status.ToString());
   }
+  // Transfer ownership of db into a unique_ptr
+  impl_->db.reset(raw_db);
 }
 
 SeenStories::~SeenStories() = default;
