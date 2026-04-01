@@ -46,15 +46,15 @@ const std::string k_prompt_prefix =
   "<url>|<summary>\n"
   "Rules: ≤50 words per summary; match the tone of the source publication.\n\n";
 
-TEST(FormatSummarisation, EmptyList)
-{
-  ASSERT_EQ(format_summarisation({}), std::nullopt);
-}
+TEST(FormatSummarisation, EmptyList) { ASSERT_EQ(format_summarisation({}), std::nullopt); }
 
 TEST(FormatSummarisation, SingleStory)
 {
   Website site{ .url = "https://tribunemag.co.uk", .name = "Tribune Magazine", .main_story_selector = "" };
-  Story story{ .title = "Test Story", .url = "https://tribunemag.co.uk/story", .website = site, .paragraph_text = "Some paragraph text." };
+  Story story{ .title = "Test Story",
+    .url = "https://tribunemag.co.uk/story",
+    .website = site,
+    .paragraph_text = "Some paragraph text." };
   auto result = format_summarisation({ story });
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(*result, k_prompt_prefix +
@@ -81,7 +81,10 @@ TEST(FormatSummarisation, MultipleStories)
   Website site_b{ .url = "https://news.ycombinator.com", .name = "Hacker News", .main_story_selector = "" };
   std::vector<Story> stories{
     { .title = "Story One", .url = "https://tribunemag.co.uk/one", .website = site_a, .paragraph_text = "Text one." },
-    { .title = "Story Two", .url = "https://news.ycombinator.com/two", .website = site_b, .paragraph_text = "Text two." },
+    { .title = "Story Two",
+      .url = "https://news.ycombinator.com/two",
+      .website = site_b,
+      .paragraph_text = "Text two." },
   };
   auto result = format_summarisation(stories);
   ASSERT_TRUE(result.has_value());
