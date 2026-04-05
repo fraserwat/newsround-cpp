@@ -1,7 +1,9 @@
 # Stage 1: Build stage
 FROM ubuntu:latest AS build
 
-# Install build-essential and cmake for compiling C++ code
+# Install build dependencies.
+# Keep library list in sync with .github/actions/install-deps/action.yml
+# (build-time) and the runtime stage below (shared libs without -dev).
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
