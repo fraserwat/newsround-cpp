@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 
 class SeenStories
 {
@@ -14,8 +15,8 @@ public:
   SeenStories(SeenStories &&) = delete;
   SeenStories &operator=(SeenStories &&) = delete;
 
-  [[nodiscard]] bool has_seen(const std::string &url) const;
-  void mark_seen(const std::string &url);
+  [[nodiscard]] bool has_seen(std::string_view url) const;
+  void mark_seen(std::string_view url);
 
 private:
   struct Impl;
