@@ -1,19 +1,19 @@
 #include "seen_stories.h"
 
 #include <filesystem>
+#include <iostream>
 #include <rocksdb/db.h>
 #include <stdexcept>
-#include <iostream>
 #include <string_view>
 
 namespace {
-  std::string_view normalize_url(std::string_view url)
-  {
-    if (url.starts_with("https://")) return url.substr(8);
-    if (url.starts_with("http://")) return url.substr(7);
-    return url;
-  }
+std::string_view normalize_url(std::string_view url)
+{
+  if (url.starts_with("https://")) return url.substr(8);
+  if (url.starts_with("http://")) return url.substr(7);
+  return url;
 }
+}// namespace
 
 struct SeenStories::Impl
 {
@@ -53,7 +53,5 @@ bool SeenStories::has_seen(std::string_view url) const
 void SeenStories::mark_seen(std::string_view url)
 {
   rocksdb::Status status = impl_->db->Put(rocksdb::WriteOptions(), normalize_url(url), "1");
-  if (!status.ok()) {
-    std::cerr << "URL " << url << " not written to RocksDB store: " << status.ToString() << '\n';
-  }
+  if (!status.ok()) { std::cerr << "URL " << url << " not written to RocksDB store: " << status.ToString() << '\n'; }
 }
